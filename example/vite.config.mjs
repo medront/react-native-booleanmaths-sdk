@@ -9,7 +9,7 @@ export default defineConfig((env) =>
       alias: {
         [pack.name]: new URL('..', import.meta.url),
       },
-      conditions: ['booleanmaths-rn-sdk-source'],
+      conditions: ['@booleanmaths/booleanmaths-rn-sdk-source'],
       dedupe: Object.keys(pack.peerDependencies),
     },
   })

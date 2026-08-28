@@ -1,4 +1,4 @@
-# booleanmaths-rn-sdk
+# @booleanmaths/booleanmaths-rn-sdk
 
 React Native wrapper around the BooleanMaths mobile SDK for user event tracking
 and attribution.
@@ -43,7 +43,7 @@ you want to avoid dead work, skip the dev warning, or show different UI, branch
 on `isSupported`:
 
 ```ts
-import { BooleanMaths } from 'booleanmaths-rn-sdk';
+import { BooleanMaths } from '@booleanmaths/booleanmaths-rn-sdk';
 
 if (BooleanMaths.isSupported) {
   BooleanMaths.initialize(API_KEY, PIXEL_ID);
@@ -69,9 +69,9 @@ Two changes, no API break for consumers:
 ## Installation
 
 ```sh
-npm install booleanmaths-rn-sdk
+npm install @booleanmaths/booleanmaths-rn-sdk
 # or
-yarn add booleanmaths-rn-sdk
+yarn add @booleanmaths/booleanmaths-rn-sdk
 ```
 
 Then rebuild the native app — a Metro reload is **not** enough:
@@ -117,7 +117,7 @@ cd ios && pod install
 ## Usage
 
 ```ts
-import { BooleanMaths } from 'booleanmaths-rn-sdk';
+import { BooleanMaths } from '@booleanmaths/booleanmaths-rn-sdk';
 
 // Once, as early as possible — typically in your root component.
 BooleanMaths.initialize('YOUR_API_KEY', 'YOUR_PIXEL_ID');

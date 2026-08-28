@@ -2,12 +2,12 @@
   "compilerOptions": {
     "rootDir": ".",
     "paths": {
-      "booleanmaths-rn-sdk": ["./src/index"]
+      "@booleanmaths/booleanmaths-rn-sdk": ["./src/index"]
     },
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,
     "customConditions": [
-      "booleanmaths-rn-sdk-source",
+      "@booleanmaths/booleanmaths-rn-sdk-source",
       "react-native-strict-api"
     ],
     "esModuleInterop": true,

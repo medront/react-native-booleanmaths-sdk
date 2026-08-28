@@ -9,7 +9,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { BooleanMaths } from 'booleanmaths-rn-sdk';
+import { BooleanMaths } from '@booleanmaths/booleanmaths-rn-sdk';
 import * as NotificationDemo from './NotificationDemo';
 import type { IntentInfo } from './NotificationDemo';
 

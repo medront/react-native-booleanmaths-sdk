@@ -29,7 +29,7 @@ function warnOnce() {
 
   if (!isPlatformSupported) {
     console.warn(
-      `[booleanmaths-rn-sdk] The BooleanMaths native SDK is not available on ${Platform.OS} ` +
+      `[@booleanmaths/booleanmaths-rn-sdk] The BooleanMaths native SDK is not available on ${Platform.OS} ` +
         '(Android only for now). All SDK calls are no-ops on this platform and no ' +
         'events will be tracked. Gate your calls on `BooleanMaths.isSupported` to ' +
         'silence this warning — see the README\'s "Platform support" section.'
@@ -38,7 +38,7 @@ function warnOnce() {
   }
 
   console.warn(
-    '[booleanmaths-rn-sdk] The native module could not be found on ' +
+    '[@booleanmaths/booleanmaths-rn-sdk] The native module could not be found on ' +
       `${Platform.OS}. Rebuild the app after installing the package (a Metro ` +
       'reload is not enough), and on iOS run `pod install`. All SDK calls are ' +
       'no-ops until this is fixed.'

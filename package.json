@@ -1,12 +1,12 @@
 {
-  "name": "booleanmaths-rn-sdk",
+  "name": "@booleanmaths/booleanmaths-rn-sdk",
   "version": "0.1.0",
-  "description": "Booleanmaths react native sdk to track user events and attribution in mobile apps.",
+  "description": "React Native SDK for BooleanMaths — track user events and attribution in mobile apps.",
   "main": "./lib/module/index.js",
   "types": "./lib/typescript/src/index.d.ts",
   "exports": {
     ".": {
-      "booleanmaths-rn-sdk-source": "./src/index.tsx",
+      "@booleanmaths/booleanmaths-rn-sdk-source": "./src/index.tsx",
       "types": "./lib/typescript/src/index.d.ts",
       "default": "./lib/module/index.js"
     },
@@ -45,19 +45,26 @@
   "keywords": [
     "react-native",
     "ios",
-    "android"
+    "android",
+    "booleanmaths",
+    "analytics",
+    "attribution",
+    "event-tracking",
+    "turbomodule",
+    "sdk"
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/google/booleanmaths-rn-sdk.git"
+    "url": "git+https://github.com/medront/react-native-booleanmaths-sdk.git"
   },
-  "author": "Antigravity <antigravity@example.com> (https://github.com/google)",
-  "license": "MIT",
+  "author": "Medront (https://github.com/medront)",
+  "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/google/booleanmaths-rn-sdk/issues"
+    "url": "https://github.com/medront/react-native-booleanmaths-sdk/issues"
   },
-  "homepage": "https://github.com/google/booleanmaths-rn-sdk#readme",
+  "homepage": "https://github.com/medront/react-native-booleanmaths-sdk#readme",
   "publishConfig": {
+    "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
   "devDependencies": {
@@ -135,7 +142,7 @@
       "customExportConditions": [
         "require",
         "react-native",
-        "<%- project.sourceCondition -%>"
+        "@booleanmaths/booleanmaths-rn-sdk-source"
       ]
     },
     "modulePathIgnorePatterns": [

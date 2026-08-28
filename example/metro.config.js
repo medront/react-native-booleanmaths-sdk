@@ -13,7 +13,7 @@ const root = path.resolve(__dirname, '..');
 const config = withMetroConfig(getDefaultConfig(__dirname), {
   root,
   dirname: __dirname,
-  conditions: ['booleanmaths-rn-sdk-source'],
+  conditions: ['@booleanmaths/booleanmaths-rn-sdk-source'],
 });
 
 module.exports = config;

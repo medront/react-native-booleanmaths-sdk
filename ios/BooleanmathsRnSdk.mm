@@ -12,7 +12,7 @@ static void BMWarnUnsupportedOnce(void)
 {
   static dispatch_once_t onceToken;
   dispatch_once(&onceToken, ^{
-    RCTLogWarn(@"[booleanmaths-rn-sdk] The BooleanMaths native SDK is not available on iOS "
+    RCTLogWarn(@"[@booleanmaths/booleanmaths-rn-sdk] The BooleanMaths native SDK is not available on iOS "
                @"(Android only for now). All SDK calls are no-ops and no events will be "
                @"tracked on this platform.");
   });

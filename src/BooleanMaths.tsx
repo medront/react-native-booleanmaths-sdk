@@ -17,7 +17,7 @@ function warnOnce() {
   hasWarned = true;
 
   console.warn(
-    '[booleanmaths-rn-sdk] The BooleanMaths SDK has no web implementation. ' +
+    '[@booleanmaths/booleanmaths-rn-sdk] The BooleanMaths SDK has no web implementation. ' +
       'All SDK calls are no-ops on web and no events will be tracked. Gate your ' +
       'calls on `BooleanMaths.isSupported` to silence this warning.'
   );
