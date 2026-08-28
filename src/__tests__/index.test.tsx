@@ -1,3 +1,178 @@
-import { it } from '@jest/globals';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  jest,
+} from '@jest/globals';
+import type { BooleanMathsApi } from '../types';
 
-it.todo('write a test');
+function createFakeNativeModule() {
+  return {
+    initializeSdk: jest.fn(),
+    trackEvent: jest.fn(),
+    handleNotificationIntent: jest.fn(),
+    getHelloMessage: jest.fn(() => 'Hello World from BooleanMaths SDK'),
+  };
+}
+
+/**
+ * Loads a fresh copy of the native wrapper with `Platform.OS` and the
+ * underlying TurboModule both under our control.
+ *
+ * `react-native` is imported first so that the mutation below lands on the same
+ * module instance the wrapper will resolve after `resetModules`.
+ */
+async function loadSdk(
+  platform: string,
+  nativeModule: unknown
+): Promise<BooleanMathsApi> {
+  jest.resetModules();
+
+  jest.doMock('../NativeBooleanmathsRnSdk', () => ({
+    __esModule: true,
+    default: nativeModule,
+  }));
+
+  const { Platform } = await import('react-native');
+  (Platform as unknown as { OS: string }).OS = platform;
+
+  const { BooleanMaths } = await import('../BooleanMaths.native');
+
+  return BooleanMaths;
+}
+
+let warnSpy: ReturnType<typeof jest.spyOn>;
+
+beforeEach(() => {
+  warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+});
+
+afterEach(() => {
+  warnSpy.mockRestore();
+});
+
+describe('on iOS, where no native BooleanMaths SDK exists', () => {
+  // The iOS TurboModule *is* present (we ship a no-op stub), so this asserts
+  // that the JavaScript platform gate alone keeps calls away from the bridge.
+  it('reports itself as unsupported', async () => {
+    const sdk = await loadSdk('ios', createFakeNativeModule());
+
+    expect(sdk.isSupported).toBe(false);
+  });
+
+  it('never throws, so a missing iOS SDK cannot crash the app', async () => {
+    const sdk = await loadSdk('ios', createFakeNativeModule());
+
+    expect(() => sdk.initialize('api-key', 'pixel-id')).not.toThrow();
+    expect(() => sdk.trackEvent('purchase')).not.toThrow();
+    expect(() => sdk.trackEvent('purchase', { value: 10 })).not.toThrow();
+    expect(() => sdk.handleNotificationIntent()).not.toThrow();
+    expect(sdk.getHelloMessage()).toBeNull();
+  });
+
+  it('does not reach the native bridge at all', async () => {
+    const native = createFakeNativeModule();
+    const sdk = await loadSdk('ios', native);
+
+    sdk.initialize('api-key', 'pixel-id');
+    sdk.trackEvent('purchase');
+    sdk.handleNotificationIntent();
+
+    expect(native.initializeSdk).not.toHaveBeenCalled();
+    expect(native.trackEvent).not.toHaveBeenCalled();
+    expect(native.handleNotificationIntent).not.toHaveBeenCalled();
+  });
+
+  it('warns exactly once no matter how many calls are made', async () => {
+    const sdk = await loadSdk('ios', createFakeNativeModule());
+
+    sdk.initialize('api-key', 'pixel-id');
+    sdk.trackEvent('one');
+    sdk.trackEvent('two');
+    sdk.handleNotificationIntent();
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(String(warnSpy.mock.calls[0]?.[0])).toContain(
+      'not available on ios'
+    );
+  });
+});
+
+describe('on Android, with the native module linked', () => {
+  it('reports itself as supported and stays quiet', async () => {
+    const sdk = await loadSdk('android', createFakeNativeModule());
+
+    expect(sdk.isSupported).toBe(true);
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('forwards initialize to the native module', async () => {
+    const native = createFakeNativeModule();
+    const sdk = await loadSdk('android', native);
+
+    sdk.initialize('api-key', 'pixel-id');
+
+    expect(native.initializeSdk).toHaveBeenCalledWith('api-key', 'pixel-id');
+  });
+
+  it('defaults omitted properties to an empty object', async () => {
+    const native = createFakeNativeModule();
+    const sdk = await loadSdk('android', native);
+
+    sdk.trackEvent('app_reviewed');
+
+    expect(native.trackEvent).toHaveBeenCalledWith('app_reviewed', {});
+  });
+
+  it('passes nested properties through untouched', async () => {
+    const native = createFakeNativeModule();
+    const sdk = await loadSdk('android', native);
+    const properties = {
+      orderId: 'ORD-1',
+      value: 2499,
+      items: [{ sku: 'SKU-1', quantity: 2 }],
+    };
+
+    sdk.trackEvent('purchase', properties);
+
+    expect(native.trackEvent).toHaveBeenCalledWith('purchase', properties);
+  });
+
+  it('forwards handleNotificationIntent', async () => {
+    const native = createFakeNativeModule();
+    const sdk = await loadSdk('android', native);
+
+    sdk.handleNotificationIntent();
+
+    expect(native.handleNotificationIntent).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns the native hello message', async () => {
+    const sdk = await loadSdk('android', createFakeNativeModule());
+
+    expect(sdk.getHelloMessage()).toBe('Hello World from BooleanMaths SDK');
+  });
+});
+
+describe('on Android, when the native module failed to link', () => {
+  it('reports itself as unsupported and does not throw', async () => {
+    const sdk = await loadSdk('android', null);
+
+    expect(sdk.isSupported).toBe(false);
+    expect(() => sdk.initialize('api-key', 'pixel-id')).not.toThrow();
+    expect(sdk.getHelloMessage()).toBeNull();
+  });
+
+  it('warns that the app needs rebuilding', async () => {
+    const sdk = await loadSdk('android', null);
+
+    sdk.initialize('api-key', 'pixel-id');
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(String(warnSpy.mock.calls[0]?.[0])).toContain(
+      'could not be found on android'
+    );
+  });
+});

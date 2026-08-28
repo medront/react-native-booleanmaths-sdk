@@ -2,7 +2,11 @@ buildscript {
   ext.BooleanmathsRnSdk = [
     kotlinVersion: "2.0.21",
     minSdkVersion: 24,
-    compileSdkVersion: 36
+    compileSdkVersion: 36,
+    // Version of the native Android SDK (com.booleanmaths:bm-sdk) this wrapper
+    // is built against. Override with `ext.BooleanmathsRnSdk_bmSdkVersion` in
+    // your app's root build.gradle to pin a different one.
+    bmSdkVersion: "1.0.7"
   ]
 
   ext.getExtOrDefault = { prop ->
@@ -31,13 +35,31 @@ apply plugin: "kotlin-android"
 
 apply plugin: "com.facebook.react"
 
+// The wrapper version reported to the native SDK via setWrapperConfig(). Read
+// from package.json so it can never drift from the published npm version.
+def wrapperVersion = new groovy.json.JsonSlurper()
+  .parseText(file("../package.json").text)
+  .version
+
+repositories {
+  google()
+  mavenCentral()
+}
+
 android {
   namespace "com.booleanmathsrnsdk"
 
   compileSdkVersion getExtOrDefault("compileSdkVersion")
 
+  buildFeatures {
+    buildConfig true
+  }
+
   defaultConfig {
     minSdkVersion getExtOrDefault("minSdkVersion")
+
+    buildConfigField "String", "WRAPPER_TYPE", "\"react-native\""
+    buildConfigField "String", "WRAPPER_VERSION", "\"${wrapperVersion}\""
   }
 
   compileOptions {
@@ -48,4 +70,9 @@ android {
 
 dependencies {
   implementation "com.facebook.react:react-android"
+
+  // The native BooleanMaths Android SDK. `api` rather than `implementation` so
+  // apps that also want to call the native singleton directly (for example to
+  // initialize from Application.onCreate) can resolve it.
+  api "com.booleanmaths:bm-sdk:${getExtOrDefault('bmSdkVersion')}"
 }
