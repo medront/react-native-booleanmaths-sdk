@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  // AppState,
+  AppState,
   Button,
-  // Linking,
+  Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -87,38 +87,38 @@ export default function App() {
         : `SDK unavailable on ${Platform.OS} — calls are no-ops`
     );
 
-    // NotificationDemo.requestPermission().then((granted) => {
-    //   if (!granted && NotificationDemo.isAvailable) {
-    //     append('notification permission denied');
-    //   }
-    // });
+    NotificationDemo.requestPermission().then((granted) => {
+      if (!granted && NotificationDemo.isAvailable) {
+        append('notification permission denied');
+      }
+    });
 
     // Cold start: the app was launched by tapping the notification. The
     // wrapper already forwarded this intent during initialize(), so the
     // NotificationClick event is attributed even though React Native mounts
     // long after the Activity was created.
-    // Linking.getInitialURL().then((url) => {
-    //   if (url) {
-    //     handleIncomingLink(url, 'launched by link');
-    //   }
-    // });
+    Linking.getInitialURL().then((url) => {
+      if (url) {
+        handleIncomingLink(url, 'launched by link');
+      }
+    });
 
     // Warm start: notification tapped while the app was already running.
-    // const linkSubscription = Linking.addEventListener('url', ({ url }) => {
-    //   handleIncomingLink(url, 'deep link');
-    // });
+    const linkSubscription = Linking.addEventListener('url', ({ url }) => {
+      handleIncomingLink(url, 'deep link');
+    });
 
     // Safety net for taps that do not carry a URL.
-    // const stateSubscription = AppState.addEventListener('change', (next) => {
-    //   if (next === 'active') {
-    //     BooleanMaths.handleNotificationIntent();
-    //   }
-    // });
+    const stateSubscription = AppState.addEventListener('change', (next) => {
+      if (next === 'active') {
+        BooleanMaths.handleNotificationIntent();
+      }
+    });
 
-    // return () => {
-    //   linkSubscription.remove();
-    //   stateSubscription.remove();
-    // };
+    return () => {
+      linkSubscription.remove();
+      stateSubscription.remove();
+    };
   }, [append, handleIncomingLink]);
 
   if (screen.name === 'promo') {

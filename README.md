@@ -17,7 +17,7 @@ Android SDK.
 
 | Platform | Native SDK | Behaviour |
 | :------- | :--------- | :-------- |
-| Android  | ✅ `com.booleanmaths:bm-sdk:1.0.7` | Fully functional |
+| Android  | ✅ `com.booleanmaths:bm-sdk:1.0.8` | Fully functional |
 | iOS      | ❌ not published | Silent no-op, **never crashes** |
 | Web      | ❌ not published | Silent no-op, **never crashes** |
 
@@ -98,7 +98,7 @@ To pin a different native SDK version, set this in your app's **root**
 ```gradle
 buildscript {
     ext {
-        BooleanmathsRnSdk_bmSdkVersion = "1.0.7"
+        BooleanmathsRnSdk_bmSdkVersion = "1.0.8"
     }
 }
 ```
