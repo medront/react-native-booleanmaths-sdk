@@ -45,6 +45,21 @@ function warnOnce() {
   );
 }
 
+/**
+ * Shared by `handleIntent` and its `handleNotificationIntent` alias. A
+ * standalone function rather than `this.handleIntent()` so the alias keeps
+ * working when it is pulled off the object, as in
+ * `const { handleNotificationIntent } = BooleanMaths`.
+ */
+function forwardCurrentIntent(): void {
+  if (!isSupported) {
+    warnOnce();
+    return;
+  }
+
+  NativeBooleanmathsRnSdk!.handleIntent();
+}
+
 export const BooleanMaths: BooleanMathsApi = {
   isSupported,
 
@@ -66,14 +81,9 @@ export const BooleanMaths: BooleanMathsApi = {
     NativeBooleanmathsRnSdk!.trackEvent(name, properties);
   },
 
-  handleNotificationIntent(): void {
-    if (!isSupported) {
-      warnOnce();
-      return;
-    }
+  handleIntent: forwardCurrentIntent,
 
-    NativeBooleanmathsRnSdk!.handleNotificationIntent();
-  },
+  handleNotificationIntent: forwardCurrentIntent,
 
   getHelloMessage(): string | null {
     if (!isSupported) {

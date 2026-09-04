@@ -41,6 +41,16 @@ class BooleanmathsRnSdkModule(reactContext: ReactApplicationContext) :
     }
   }
 
+  override fun handleIntent() {
+    safely("handleIntent") { forwardCurrentIntent() }
+  }
+
+  /**
+   * Alias of [handleIntent]. The native SDK unified ad deep links, app links
+   * and push notifications behind `handleIntent` in 1.0.9 and kept
+   * `handleNotificationIntent` as a delegating alias; this mirrors that so
+   * apps written against the older name keep working unchanged.
+   */
   override fun handleNotificationIntent() {
     safely("handleNotificationIntent") { forwardCurrentIntent() }
   }
@@ -64,7 +74,7 @@ class BooleanmathsRnSdkModule(reactContext: ReactApplicationContext) :
 
     // The native SDK de-duplicates intents it has already processed, so
     // calling this more than once for the same intent is safe.
-    BooleanMathsSDK.handleNotificationIntent(intent)
+    BooleanMathsSDK.handleIntent(intent)
   }
 
   /**

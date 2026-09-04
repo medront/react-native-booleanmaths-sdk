@@ -64,8 +64,21 @@ export default function App() {
    */
   const handleIncomingLink = useCallback(
     async (url: string, origin: string) => {
-      // Attribution first — this is what produces the NotificationClick event.
-      BooleanMaths.handleNotificationIntent();
+      // Attribution first — this is what produces the DeepLinkClick /
+      // NotificationClick event.
+      BooleanMaths.handleIntent();
+
+      // Migrating from an older release? `handleNotificationIntent()` is the
+      // previous name for this call and still works — it is a deprecated alias
+      // that routes to the exact same native `handleIntent`, so there is no
+      // behavioural difference and no need to call both:
+      //
+      //   BooleanMaths.handleNotificationIntent();
+      //
+      // Native SDK 1.0.9 unified ad deep links, app links and push
+      // notifications behind one method, hence the rename. Prefer
+      // `handleIntent()` in new code.
+
       append(`${origin}: ${url}`);
 
       const info = await NotificationDemo.getCurrentIntentInfo();
@@ -95,7 +108,7 @@ export default function App() {
 
     // Cold start: the app was launched by tapping the notification. The
     // wrapper already forwarded this intent during initialize(), so the
-    // NotificationClick event is attributed even though React Native mounts
+    // DeepLinkClick event is attributed even though React Native mounts
     // long after the Activity was created.
     Linking.getInitialURL().then((url) => {
       if (url) {
@@ -111,7 +124,7 @@ export default function App() {
     // Safety net for taps that do not carry a URL.
     const stateSubscription = AppState.addEventListener('change', (next) => {
       if (next === 'active') {
-        BooleanMaths.handleNotificationIntent();
+        BooleanMaths.handleIntent();
       }
     });
 
@@ -226,8 +239,9 @@ function PromoScreen({
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>🎉 Summer Sale</Text>
       <Text style={styles.ok}>
-        Navigated here from the notification tap. A `NotificationClick` event
-        has been queued with the campaign data below.
+        Navigated here from the notification tap. The tap intent is an
+        `ACTION_VIEW` deep link, so a `DeepLinkClick` event has been queued with
+        the campaign data below.
       </Text>
 
       <Text style={styles.sectionTitle}>Deep link query params</Text>

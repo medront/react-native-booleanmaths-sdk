@@ -28,9 +28,15 @@ static void BMWarnUnsupportedOnce(void)
   BMWarnUnsupportedOnce();
 }
 
-- (void)handleNotificationIntent
+- (void)handleIntent
 {
   // Android-only concept; nothing to do on iOS even once an iOS SDK exists.
+  BMWarnUnsupportedOnce();
+}
+
+- (void)handleNotificationIntent
+{
+  // Alias of handleIntent, mirroring the Android bridge.
   BMWarnUnsupportedOnce();
 }
 

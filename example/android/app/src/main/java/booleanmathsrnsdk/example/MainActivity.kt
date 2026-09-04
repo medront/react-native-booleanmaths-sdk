@@ -15,7 +15,7 @@ class MainActivity : ReactActivity() {
    * already running arrives here rather than through onCreate. Neither
    * ReactActivity nor its delegate calls setIntent, so without this override
    * getIntent() would keep returning the *original* launch intent and
-   * `BooleanMaths.handleNotificationIntent()` would attribute nothing.
+   * `BooleanMaths.handleIntent()` would attribute nothing.
    */
   override fun onNewIntent(intent: Intent) {
     // Set before super so the fresh intent is in place by the time React

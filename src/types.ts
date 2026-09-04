@@ -37,12 +37,25 @@ export interface BooleanMathsApi {
   trackEvent(name: string, properties?: BooleanMathsEventProperties): void;
 
   /**
-   * Forwards the current Activity's intent to the native SDK so deep-link and
-   * notification campaign data is attributed.
+   * Forwards the current Activity's intent to the native SDK so ad deep links,
+   * app links and push-notification campaign data are attributed.
    *
-   * Android only — a no-op on every other platform. Call this from your
-   * deep-link handler and once after `initialize`; see the README for why the
-   * launch intent needs this.
+   * This is the primary entry point for every kind of launch intent. Android
+   * only — a no-op on every other platform. Call it from your deep-link
+   * handler; `initialize` already forwards the launch intent itself (see the
+   * README for why that needs special handling).
+   *
+   * Safe to call repeatedly — the native SDK de-duplicates intents it has
+   * already processed.
+   */
+  handleIntent(): void;
+
+  /**
+   * Backward-compatible alias of {@link handleIntent}.
+   *
+   * @deprecated Prefer `handleIntent()`, which names what it actually does:
+   * the native SDK routes deep links, app links and notifications through the
+   * same path. This alias will be kept for the foreseeable future.
    */
   handleNotificationIntent(): void;
 

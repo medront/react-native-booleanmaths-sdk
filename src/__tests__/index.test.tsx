@@ -12,6 +12,7 @@ function createFakeNativeModule() {
   return {
     initializeSdk: jest.fn(),
     trackEvent: jest.fn(),
+    handleIntent: jest.fn(),
     handleNotificationIntent: jest.fn(),
     getHelloMessage: jest.fn(() => 'Hello World from BooleanMaths SDK'),
   };
@@ -68,6 +69,7 @@ describe('on iOS, where no native BooleanMaths SDK exists', () => {
     expect(() => sdk.initialize('api-key', 'pixel-id')).not.toThrow();
     expect(() => sdk.trackEvent('purchase')).not.toThrow();
     expect(() => sdk.trackEvent('purchase', { value: 10 })).not.toThrow();
+    expect(() => sdk.handleIntent()).not.toThrow();
     expect(() => sdk.handleNotificationIntent()).not.toThrow();
     expect(sdk.getHelloMessage()).toBeNull();
   });
@@ -78,10 +80,12 @@ describe('on iOS, where no native BooleanMaths SDK exists', () => {
 
     sdk.initialize('api-key', 'pixel-id');
     sdk.trackEvent('purchase');
+    sdk.handleIntent();
     sdk.handleNotificationIntent();
 
     expect(native.initializeSdk).not.toHaveBeenCalled();
     expect(native.trackEvent).not.toHaveBeenCalled();
+    expect(native.handleIntent).not.toHaveBeenCalled();
     expect(native.handleNotificationIntent).not.toHaveBeenCalled();
   });
 
@@ -91,6 +95,7 @@ describe('on iOS, where no native BooleanMaths SDK exists', () => {
     sdk.initialize('api-key', 'pixel-id');
     sdk.trackEvent('one');
     sdk.trackEvent('two');
+    sdk.handleIntent();
     sdk.handleNotificationIntent();
 
     expect(warnSpy).toHaveBeenCalledTimes(1);
@@ -140,13 +145,37 @@ describe('on Android, with the native module linked', () => {
     expect(native.trackEvent).toHaveBeenCalledWith('purchase', properties);
   });
 
-  it('forwards handleNotificationIntent', async () => {
+  it('forwards handleIntent', async () => {
+    const native = createFakeNativeModule();
+    const sdk = await loadSdk('android', native);
+
+    sdk.handleIntent();
+
+    expect(native.handleIntent).toHaveBeenCalledTimes(1);
+  });
+
+  // The native SDK unified every intent kind behind `handleIntent` in 1.0.9,
+  // so the legacy JS name must reach *that* method rather than the native
+  // alias — otherwise callers on the old name would depend on an alias the
+  // native SDK is free to drop.
+  it('routes the handleNotificationIntent alias to native handleIntent', async () => {
     const native = createFakeNativeModule();
     const sdk = await loadSdk('android', native);
 
     sdk.handleNotificationIntent();
 
-    expect(native.handleNotificationIntent).toHaveBeenCalledTimes(1);
+    expect(native.handleIntent).toHaveBeenCalledTimes(1);
+    expect(native.handleNotificationIntent).not.toHaveBeenCalled();
+  });
+
+  it('keeps the alias working when it is destructured off the object', async () => {
+    const native = createFakeNativeModule();
+    const sdk = await loadSdk('android', native);
+    const { handleIntent, handleNotificationIntent } = sdk;
+
+    expect(() => handleIntent()).not.toThrow();
+    expect(() => handleNotificationIntent()).not.toThrow();
+    expect(native.handleIntent).toHaveBeenCalledTimes(2);
   });
 
   it('returns the native hello message', async () => {

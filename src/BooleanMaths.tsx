@@ -34,6 +34,10 @@ export const BooleanMaths: BooleanMathsApi = {
     warnOnce();
   },
 
+  handleIntent(): void {
+    warnOnce();
+  },
+
   handleNotificationIntent(): void {
     warnOnce();
   },

@@ -10,6 +10,11 @@ export interface Spec extends TurboModule {
   initializeSdk(apiKey: string, pixelId: string): void;
   trackEvent(name: string, properties: Object): void;
   /** Android only. No-op elsewhere. */
+  handleIntent(): void;
+  /**
+   * Alias of `handleIntent`, kept so existing callers keep working. Android
+   * only. No-op elsewhere.
+   */
   handleNotificationIntent(): void;
   /** Smoke test that the native bridge is wired up. */
   getHelloMessage(): string;

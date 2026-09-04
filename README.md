@@ -17,7 +17,7 @@ Android SDK.
 
 | Platform | Native SDK | Behaviour |
 | :------- | :--------- | :-------- |
-| Android  | ✅ `com.booleanmaths:bm-sdk:1.0.8` | Fully functional |
+| Android  | ✅ `com.booleanmaths:bm-sdk:1.0.9` | Fully functional |
 | iOS      | ❌ not published | Silent no-op, **never crashes** |
 | Web      | ❌ not published | Silent no-op, **never crashes** |
 
@@ -98,7 +98,7 @@ To pin a different native SDK version, set this in your app's **root**
 ```gradle
 buildscript {
     ext {
-        BooleanmathsRnSdk_bmSdkVersion = "1.0.8"
+        BooleanmathsRnSdk_bmSdkVersion = "1.0.9"
     }
 }
 ```
@@ -155,11 +155,21 @@ forwards the launch intent (see [Deep links](#deep-links-and-notification-attrib
 Records a custom event. `properties` defaults to `{}` and may contain strings,
 numbers, booleans, nested objects, and arrays.
 
-### `BooleanMaths.handleNotificationIntent(): void`
+### `BooleanMaths.handleIntent(): void`
 
 **Android only** (no-op elsewhere). Forwards the current Activity's intent to
-the native SDK so deep-link and notification campaign data is attributed. Safe
-to call repeatedly — the native SDK de-duplicates intents it has already seen.
+the native SDK so ad deep links, app links and push-notification campaign data
+are attributed. Safe to call repeatedly — the native SDK de-duplicates intents
+it has already seen.
+
+This is the single entry point for every kind of launch intent; native SDK
+1.0.9 unified them behind one method.
+
+### `BooleanMaths.handleNotificationIntent(): void`
+
+Deprecated alias of `handleIntent()`, kept so existing callers keep working.
+It calls straight through to the same native `handleIntent`, so there is no
+behavioural difference — prefer `handleIntent()` in new code.
 
 ### `BooleanMaths.getHelloMessage(): string | null`
 
@@ -181,7 +191,7 @@ app is never seen by those callbacks.**
 
 This wrapper works around it by forwarding `currentActivity.intent` at the end
 of `initialize()`. For links that arrive while the app is already running, call
-`handleNotificationIntent()` yourself:
+`handleIntent()` yourself:
 
 ```ts
 useEffect(() => {
@@ -189,13 +199,13 @@ useEffect(() => {
 
   // Deep link received while the app is running.
   const link = Linking.addEventListener('url', () => {
-    BooleanMaths.handleNotificationIntent();
+    BooleanMaths.handleIntent();
   });
 
   // Notification tap that brought the app back to the foreground.
   const state = AppState.addEventListener('change', (next) => {
     if (next === 'active') {
-      BooleanMaths.handleNotificationIntent();
+      BooleanMaths.handleIntent();
     }
   });
 
@@ -255,9 +265,11 @@ Watch it land with:
 adb logcat -s BooleanMathsSDK:D EventDispatcher:D
 ```
 
-A successful tap logs `Notification click tracked with campaign data.`,
-persists a `NotificationClick` event, and dispatches it with the campaign
-fields nested under `data.notification`.
+The demo's tap intent is an `ACTION_VIEW` deep link, so a successful tap logs
+`Deep link click tracked with campaign data.`, persists a `DeepLinkClick`
+event, and dispatches it with the campaign fields nested under `data.link`. An
+intent without `ACTION_VIEW` takes the `NotificationClick` path instead — see
+[Automatic events](#automatic-events).
 
 ---
 
@@ -269,31 +281,40 @@ The native SDK tracks these without any call from you:
 | :---- | :--- |
 | `app_opened` | First Activity creation / SDK initialization |
 | `FirstOpen` | Once per install, with Google Play Install Referrer attribution |
-| `NotificationClick` | Any intent with an action, data string, or extras is handled — see the caveat below |
+| `DeepLinkClick` | An `ACTION_VIEW` intent is handled — ad deep links and app links. Campaign fields nest under `data.link` |
+| `NotificationClick` | Any other intent carrying campaign data is handled. Fields nest under `data.notification` |
 
 Visitor ID and session ID (30-minute timeout) are generated and persisted
-natively.
+natively. Campaign data from a handled intent is also persisted by
+`AttributionManager` and attached to **every subsequent event** as
+`data.attribution` — natively, so `trackEvent` needs no extra work from you.
 
-> ⚠️ **`NotificationClick` fires on ordinary app opens too (native SDK v1.0.7).**
-> `extractCampaignData` records `intent.action` unconditionally, and
-> `handleNotificationIntent` emits the event whenever the resulting map is
-> non-empty. A launcher tap always carries `action = ACTION_MAIN`, so opening
-> the app normally produces:
+### What counts as a campaign intent (native SDK v1.0.9)
+
+`handleIntent` ignores an intent when **all** of these hold, which is what a
+plain launcher tap looks like:
+
+- `action` is `ACTION_MAIN`, **and**
+- `categories` contains `CATEGORY_LAUNCHER`, **and**
+- there are no extras, **and**
+- `data` is `null`
+
+Anything else with non-empty campaign data is attributed: `ACTION_VIEW` emits
+`DeepLinkClick`, everything else emits `NotificationClick`. Intents are
+de-duplicated in a `WeakHashMap`, so re-forwarding the same intent is a no-op.
+
+> ℹ️ **This fixes a v1.0.7/v1.0.8 bug this README previously warned about.**
+> Older native SDKs recorded `intent.action` unconditionally and emitted
+> `NotificationClick` whenever the resulting map was non-empty — so an ordinary
+> launcher open produced a spurious
+> `{ "event": "NotificationClick", "data": { "notification": { "action": "android.intent.action.MAIN" } } }`
+> and the event could not be used as a tap metric without downstream
+> filtering. As of 1.0.9 the launcher case is skipped at the source, and real
+> deep links are split out into their own `DeepLinkClick` event.
 >
-> ```json
-> { "event": "NotificationClick",
->   "data": { "notification": { "action": "android.intent.action.MAIN" } } }
-> ```
->
-> So `NotificationClick` counts **notification taps plus plain opens**, and
-> cannot be used as a tap metric without filtering. A real tap is
-> distinguishable downstream: it carries a `data` deep link and/or campaign
-> extras, whereas a launcher open has only `action`.
->
-> This wrapper reproduces the behaviour deliberately, for parity with native
-> Android and the Flutter wrapper — the native SDK does exactly the same via its
-> `onActivityCreated` callback. The fix belongs upstream in the Android SDK
-> (require deep-link data or extras before emitting the event), not here.
+> If you built dashboards or alerts that filter `NotificationClick` down to
+> real taps, revisit them: the noise is gone, and `ACTION_VIEW` taps now arrive
+> under a **different event name**.
 
 ---
 
@@ -311,7 +332,7 @@ Two normalizations happen on the Android side, both worth knowing:
   { "value": 2499, "items": [{ "quantity": 2, "price": 999.5 }] }
   ```
 
-  > ⚠️ **Known native SDK limitation (v1.0.7).** The integers do *not* survive
+  > ⚠️ **Known native SDK limitation (still present in v1.0.9).** The integers do *not* survive
   > to the wire. `EventDispatcher` re-reads the stored payload with
   > `gson.fromJson(properties, Map::class.java)`, and Gson coerces every number
   > in a raw `Map` to `Double` — so the request body ends up with `2499.0` and
@@ -358,7 +379,7 @@ explicit forwarding, and `singleTask` activities need `setIntent`.
 
 ## License
 
-MIT
+[Apache-2.0](LICENSE)
 
 ---
 
