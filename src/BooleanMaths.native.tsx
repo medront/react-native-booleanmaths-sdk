@@ -3,11 +3,18 @@ import NativeBooleanmathsRnSdk from './NativeBooleanmathsRnSdk';
 import type { BooleanMathsApi, BooleanMathsEventProperties } from './types';
 
 /**
- * The BooleanMaths native SDK currently ships for Android only. There is no
- * iOS artifact yet, so on iOS every call below short-circuits and the SDK
- * behaves as a silent no-op rather than crashing the app.
+ * The BooleanMaths native SDK ships for Android (`com.booleanmaths:bm-sdk`) and
+ * iOS (`BooleanMathsSDK`). Any other platform — including out-of-tree React
+ * Native targets — has no native artifact, so every call below short-circuits
+ * and the SDK behaves as a silent no-op rather than crashing the app.
+ *
+ * Note that `handleIntent` is a no-op on iOS even though iOS is supported here:
+ * intents are an Android concept. See its JSDoc in `./types`.
  */
-const SUPPORTED_PLATFORMS: ReadonlyArray<typeof Platform.OS> = ['android'];
+const SUPPORTED_PLATFORMS: ReadonlyArray<typeof Platform.OS> = [
+  'android',
+  'ios',
+];
 
 const isPlatformSupported = SUPPORTED_PLATFORMS.includes(Platform.OS);
 
@@ -30,7 +37,7 @@ function warnOnce() {
   if (!isPlatformSupported) {
     console.warn(
       `[@booleanmaths/booleanmaths-rn-sdk] The BooleanMaths native SDK is not available on ${Platform.OS} ` +
-        '(Android only for now). All SDK calls are no-ops on this platform and no ' +
+        '(Android and iOS only). All SDK calls are no-ops on this platform and no ' +
         'events will be tracked. Gate your calls on `BooleanMaths.isSupported` to ' +
         'silence this warning — see the README\'s "Platform support" section.'
     );

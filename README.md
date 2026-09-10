@@ -5,42 +5,90 @@ and attribution.
 
 This package is a thin TurboModule bridge over the native
 [`com.booleanmaths:bm-sdk`](https://central.sonatype.com/artifact/com.booleanmaths/bm-sdk)
-Android SDK.
+Android SDK and the
+[`BooleanMathsSDK`](https://cocoapods.org/pods/BooleanMathsSDK) iOS SDK.
+
+**One import, one API, both platforms.** There are no platform-specific entry
+points — `import { BooleanMaths } from '@booleanmaths/booleanmaths-rn-sdk'` and
+call the same methods everywhere.
 
 ---
 
-## ⚠️ Platform support
-
-> **There is no BooleanMaths iOS SDK yet.** The native SDK is published for
-> **Android only**. On iOS (and on web) this package installs and builds
-> normally, but **every SDK call is a no-op and no events are tracked**.
+## Platform support
 
 | Platform | Native SDK | Behaviour |
 | :------- | :--------- | :-------- |
 | Android  | ✅ `com.booleanmaths:bm-sdk:1.0.9` | Fully functional |
-| iOS      | ❌ not published | Silent no-op, **never crashes** |
+| iOS      | ✅ `BooleanMathsSDK 1.0.1` | Event tracking fully functional — see below |
 | Web      | ❌ not published | Silent no-op, **never crashes** |
+
+### What iOS supports
+
+Event tracking is complete and at parity with Android. Attribution features
+are not — they are deferred to a later release, so their absence is scope
+rather than a bug.
+
+| Feature | Android | iOS |
+| :------ | :-----: | :-: |
+| `initialize()` | ✅ | ✅ |
+| `trackEvent()` with nested properties | ✅ | ✅ |
+| `wrapper_type` / `wrapper_version` on every event | ✅ | ✅ |
+| Automatic `app_opened` | ✅ | ✅ |
+| Automatic `FirstOpen` (once per install) | ✅ | ✅ — but with no attribution payload, see below |
+| Visitor ID and 30-minute session handling | ✅ | ✅ |
+| Durable on-device queue surviving app restarts | ✅ | ✅ |
+| Automatic flush when the app backgrounds | ✅ | ✅ |
+| `getHelloMessage()` bridge smoke test | ✅ | ✅ |
+| **Deep links / universal links** (`DeepLinkClick`) | ✅ | ❌ |
+| **Push-notification attribution** (`NotificationClick`) | ✅ | ❌ |
+| **`handleIntent()` / `handleNotificationIntent()`** | ✅ | ❌ no-op |
+| **Install attribution** on `FirstOpen` | ✅ Play Install Referrer | ❌ `data` is `{}` |
+
+Notes on the iOS gaps:
+
+- **`handleIntent()` is safe to call on iOS.** It reaches a native no-op and
+  logs one dev-mode notice. Shared code does not need to branch on platform.
+- **`FirstOpen` still fires on iOS**, once per install — it just carries no
+  campaign payload. `data` is `{}` (present but empty), so the wire shape will
+  not change when Apple Search Ads attribution lands.
+- On iOS there is **no `DeepLinkClick` or `NotificationClick` event at all**,
+  and consequently no `data.attribution` block on subsequent events.
+- **`flush()` is not exposed to JavaScript** on either platform. The iOS SDK
+  flushes automatically on `willResignActive` / `didBecomeActive`; it will be
+  exposed only once Android has an equivalent, so it can ship as a genuinely
+  cross-platform API.
+- macOS and tvOS are out of scope. The native SDK compiles for them; this
+  wrapper targets iOS only.
 
 ### Why it does not crash
 
-Two independent guards, so a missing iOS SDK can never take your app down:
+Two independent guards, so an unsupported platform or an incomplete native
+install can never take your app down:
 
 1. **JavaScript gate.** `BooleanMaths` checks `Platform.OS` against an
-   allowlist (currently `['android']`) and returns before touching the native
+   allowlist (`['android', 'ios']`) and returns before touching the native
    bridge. It also verifies the TurboModule actually resolved, which covers a
-   broken or incomplete native install.
-2. **Native backstop.** iOS still ships a real TurboModule
-   ([`ios/BooleanmathsRnSdk.mm`](ios/BooleanmathsRnSdk.mm)) whose methods are
-   no-ops. So even a direct call into the bridge is harmless.
+   broken or incomplete native install — most often a JS install without a
+   native rebuild.
+2. **Native backstop.** Every native call is wrapped so failures are logged
+   rather than thrown into JavaScript
+   ([`safely()`](android/src/main/java/com/booleanmathsrnsdk/BooleanmathsRnSdkModule.kt)
+   on Android, `BMSafely()` in
+   [`ios/BooleanmathsRnSdk.mm`](ios/BooleanmathsRnSdk.mm)). Analytics should
+   never crash the host app.
+
+On web the JavaScript gate is the whole story: a separate no-op implementation
+([`src/BooleanMaths.tsx`](src/BooleanMaths.tsx)) is resolved by the bundler, so
+shared code can call the SDK unconditionally without platform checks.
 
 In development (`__DEV__`) you get **one** console warning per app launch, not
 one per call.
 
-### The fix: gate your own analytics code
+### Optionally gate your own analytics code
 
 Calling the SDK unconditionally is safe — you do not *need* to branch. But if
-you want to avoid dead work, skip the dev warning, or show different UI, branch
-on `isSupported`:
+you want to avoid dead work on web, skip the dev warning, or show different UI,
+branch on `isSupported`:
 
 ```ts
 import { BooleanMaths } from '@booleanmaths/booleanmaths-rn-sdk';
@@ -48,21 +96,12 @@ import { BooleanMaths } from '@booleanmaths/booleanmaths-rn-sdk';
 if (BooleanMaths.isSupported) {
   BooleanMaths.initialize(API_KEY, PIXEL_ID);
 } else {
-  // Fall back to another analytics provider on iOS, or do nothing.
+  // Web, or a native install that needs rebuilding. Fall back or do nothing.
 }
 ```
 
-`isSupported` is a plain boolean, evaluated at module load — cheap to read as
-often as you like.
-
-### When the iOS SDK ships
-
-Two changes, no API break for consumers:
-
-1. Add the iOS dependency to [`BooleanmathsRnSdk.podspec`](BooleanmathsRnSdk.podspec)
-   and implement the method bodies in [`ios/BooleanmathsRnSdk.mm`](ios/BooleanmathsRnSdk.mm).
-2. Add `'ios'` to `SUPPORTED_PLATFORMS` in
-   [`src/BooleanMaths.native.tsx`](src/BooleanMaths.native.tsx).
+`isSupported` is `true` on Android and iOS. It is a plain boolean, evaluated at
+module load — cheap to read as often as you like.
 
 ---
 
@@ -78,14 +117,17 @@ Then rebuild the native app — a Metro reload is **not** enough:
 
 ```sh
 npx react-native run-android
+# and/or
+cd ios && pod install && cd .. && npx react-native run-ios
 ```
 
 ### Requirements
 
 - React Native **0.80+** with the **New Architecture** enabled (this is a
   TurboModule)
-- Android **minSdkVersion 24** or higher (the native SDK requires it)
-- `compileSdkVersion 36`, Java 17
+- **Android:** `minSdkVersion` 24 or higher (the native SDK requires it),
+  `compileSdkVersion 36`, Java 17
+- **iOS:** deployment target **15.1** or higher, and **Xcode 16+**
 
 ### Android
 
@@ -105,12 +147,30 @@ buildscript {
 
 ### iOS
 
-Run `pod install` as usual. This installs the no-op stub described above — it
-compiles and links, it just does not track anything.
+Autolinking picks the module up; run `pod install` to pull in the native SDK.
 
 ```sh
 cd ios && pod install
 ```
+
+That resolves `BooleanMathsSDK` from CocoaPods Trunk. Points worth knowing:
+
+- **Minimum deployment target is iOS 15.1**, matching React Native's own floor,
+  so adopting this SDK does not raise your app's minimum iOS version.
+- **The pod is pinned to `~> 1.0.1`,** deliberately not `~> 1.0`. Version 1.0.0
+  is still published with an iOS 17.0 floor, and resolving to it would break
+  the install for apps below iOS 17. Confirm your `Podfile.lock` shows
+  `BooleanMathsSDK (1.0.1)` or newer.
+- **The SDK ships as a closed-source, vendored *dynamic* XCFramework.**
+  CocoaPods embeds and re-signs it with your app's identity. If you use
+  `use_frameworks!`, both `:linkage => :static` and `:linkage => :dynamic`
+  are supported.
+- **No privacy manifest work needed.** The SDK bundles its own
+  `PrivacyInfo.xcprivacy` inside the XCFramework, so App Store
+  privacy-manifest requirements are covered by the pod.
+- **Xcode 16+ is required.** The SDK's `.swiftinterface` is emitted at Swift 6.
+  Library evolution is enabled, so it is not pinned to the exact Xcode that
+  built it — but the toolchain must understand Swift 6.
 
 ---
 
@@ -146,9 +206,16 @@ ignored.
 
 ### `BooleanMaths.initialize(apiKey, pixelId): void`
 
-Initializes the native SDK. Also registers this wrapper with the native SDK so
-every event carries `wrapper_type: "react-native"` and the wrapper version, and
-forwards the launch intent (see [Deep links](#deep-links-and-notification-attribution)).
+Initializes the native SDK. Also registers this wrapper with the native SDK
+**before** initializing, so that even the automatic `FirstOpen` and `app_opened`
+events emitted during initialization already carry
+`wrapper_type: "react-native"` and the wrapper version. That version is read
+from `package.json` on both platforms, so it cannot drift from the published npm
+version.
+
+On Android it additionally forwards the launch intent (see
+[Deep links](#deep-links-and-notification-attribution)); there is no iOS
+equivalent.
 
 ### `BooleanMaths.trackEvent(name, properties?): void`
 
@@ -157,13 +224,18 @@ numbers, booleans, nested objects, and arrays.
 
 ### `BooleanMaths.handleIntent(): void`
 
-**Android only** (no-op elsewhere). Forwards the current Activity's intent to
-the native SDK so ad deep links, app links and push-notification campaign data
-are attributed. Safe to call repeatedly — the native SDK de-duplicates intents
-it has already seen.
+**Android only.** Forwards the current Activity's intent to the native SDK so
+ad deep links, app links and push-notification campaign data are attributed.
+Safe to call repeatedly — the native SDK de-duplicates intents it has already
+seen.
 
 This is the single entry point for every kind of launch intent; native SDK
 1.0.9 unified them behind one method.
+
+**A no-op on iOS**, and safe to call there — it logs one dev-mode notice and
+returns. The reason is scope, not platform support: intents are an Android
+concept, and iOS deep links / universal links are deferred to a later release.
+You do not need to branch on platform before calling it.
 
 ### `BooleanMaths.handleNotificationIntent(): void`
 
@@ -174,15 +246,25 @@ behavioural difference — prefer `handleIntent()` in new code.
 ### `BooleanMaths.getHelloMessage(): string | null`
 
 Bridge smoke test. Returns the native SDK's hello string, or `null` where there
-is no native SDK.
+is no native SDK. The string comes from the native SDK itself on both platforms
+(not from this wrapper), so a correct value also proves the native artifact
+actually linked — which on iOS is the quickest way to confirm the XCFramework
+was embedded.
 
 ### `BooleanMaths.isSupported: boolean`
 
-`true` only where a real native SDK is linked. Currently Android only.
+`true` only where a real native SDK is linked — Android and iOS. `false` on
+web, and on any platform where the native module failed to resolve (typically a
+JS install without a native rebuild).
 
 ---
 
 ## Deep links and notification attribution
+
+> **Android only.** This entire section does not apply to iOS, where
+> `handleIntent()` is a no-op and no `DeepLinkClick` / `NotificationClick`
+> events are produced. The code below is still safe to run unchanged on iOS —
+> the calls simply do nothing.
 
 The native SDK registers its `ActivityLifecycleCallbacks` **inside**
 `initialize()`. In a React Native app that runs long after `MainActivity`'s
@@ -277,17 +359,25 @@ intent without `ACTION_VIEW` takes the `NotificationClick` path instead — see
 
 The native SDK tracks these without any call from you:
 
-| Event | When |
-| :---- | :--- |
-| `app_opened` | First Activity creation / SDK initialization |
-| `FirstOpen` | Once per install, with Google Play Install Referrer attribution |
-| `DeepLinkClick` | An `ACTION_VIEW` intent is handled — ad deep links and app links. Campaign fields nest under `data.link` |
-| `NotificationClick` | Any other intent carrying campaign data is handled. Fields nest under `data.notification` |
+| Event | When | Android | iOS |
+| :---- | :--- | :-----: | :-: |
+| `app_opened` | First Activity creation / SDK initialization | ✅ | ✅ |
+| `FirstOpen` | Once per install | ✅ with Google Play Install Referrer attribution | ✅ but `data` is `{}` |
+| `DeepLinkClick` | An `ACTION_VIEW` intent is handled — ad deep links and app links. Campaign fields nest under `data.link` | ✅ | ❌ |
+| `NotificationClick` | Any other intent carrying campaign data is handled. Fields nest under `data.notification` | ✅ | ❌ |
+
+On both platforms `FirstOpen` precedes `app_opened`, so a new install's stream
+reads in order. `FirstOpen` is PascalCase on the wire on purpose — the two
+platforms match byte-for-byte and backend install reporting keys off that exact
+string.
 
 Visitor ID and session ID (30-minute timeout) are generated and persisted
-natively. Campaign data from a handled intent is also persisted by
-`AttributionManager` and attached to **every subsequent event** as
-`data.attribution` — natively, so `trackEvent` needs no extra work from you.
+natively on both platforms.
+
+**Attribution is Android-only.** Campaign data from a handled intent is
+persisted by `AttributionManager` and attached to **every subsequent event** as
+`data.attribution`. iOS produces no `data.attribution` block, since it handles
+no intents; Apple Search Ads attribution is deferred to a later release.
 
 ### What counts as a campaign intent (native SDK v1.0.9)
 
@@ -320,7 +410,34 @@ de-duplicated in a `WeakHashMap`, so re-forwarding the same intent is a no-op.
 
 ## How properties cross the bridge
 
-Two normalizations happen on the Android side, both worth knowing:
+Each platform normalizes `properties` at the native boundary before handing it
+to the SDK. The rules differ because the two SDKs serialize differently — the
+observable payload is the same in the cases that matter.
+
+| Input | Android | iOS |
+| :---- | :------ | :-- |
+| `null` / `undefined` object value | Key dropped | Key dropped |
+| `null` inside an array | Preserved (indices must not shift) | Preserved |
+| Nested objects and arrays | Recursed | Recursed |
+| Whole numbers (`3`) | Coerced to integer — see the Gson caveat below | No action needed; `JSONSerialization` already emits `3`, not `3.0` |
+| Fractions (`999.5`) | Untouched | Untouched |
+| Booleans | Untouched | Untouched |
+| **`NaN` / `Infinity`** | Passed through as-is | **Key dropped** — see below |
+
+### iOS: why `NaN` is dropped rather than passed through
+
+This one is load-bearing, not cosmetic. The iOS SDK guards its writes with
+`JSONSerialization.isValidJSONObject(...)` and **silently discards the payload**
+when that returns false. A JS `NaN` or `Infinity` arrives as a non-finite
+`NSNumber` and invalidates the whole object — so a single bad property value
+could discard the event, or the entire outgoing batch. The wrapper strips those
+keys at the boundary so the rest of the event survives.
+
+`NSDate` and anything else not JSON-representable is dropped for the same
+reason. Everything is handled recursively, so a `NaN` nested three objects deep
+costs you that one key and nothing else.
+
+### Android normalization
 
 - **Integral numbers are converted to integers.** React Native passes every JS
   number across the bridge as a `Double`, so `{ count: 3 }` would otherwise be
@@ -346,28 +463,50 @@ Two normalizations happen on the Android side, both worth knowing:
   serializes with Gson, which omits null map values anyway, so the emitted JSON
   is identical. Nulls **inside arrays** are preserved so indices do not shift.
 
-Failures in the native bridge are logged (`adb logcat -s BooleanmathsRnSdk`)
-rather than thrown into JavaScript — analytics should never crash the host app.
+Failures in the native bridge are logged rather than thrown into JavaScript —
+analytics should never crash the host app. Android logs to
+`adb logcat -s BooleanmathsRnSdk`; iOS logs through `RCTLogError`, visible in
+Xcode's console and Metro.
 
 ---
 
 ## Troubleshooting
 
 **No events arriving.** Confirm `BooleanMaths.isSupported` is `true`, then check
-`adb logcat -s BooleanMathsSDK:D BooleanmathsRnSdk:D`. The native SDK logs each
-persisted event and the full payload it sends.
+the native logs — `adb logcat -s BooleanMathsSDK:D BooleanmathsRnSdk:D` on
+Android, or Xcode's console on iOS. The native SDK logs each persisted event and
+the full payload it sends.
 
 **Warning: "native module could not be found".** The JS installed but the native
-side did not. Rebuild the app (`npx react-native run-android`) rather than just
-reloading Metro; on iOS run `pod install`.
+side did not. Rebuild the app (`npx react-native run-android`, or `pod install`
+followed by `npx react-native run-ios`) rather than just reloading Metro.
 
-**Events show a delay.** By design. Each `trackEvent` enqueues an immediate
-sync attempt, but WorkManager also runs a periodic 15-minute batch job and
-requires network connectivity.
+**iOS: crash at launch with a dyld "Library not loaded" / "image not found"
+error naming `BooleanMathsSDK`.** The XCFramework is a *dynamic* framework and
+was not embedded. Confirm the `[CP] Embed Pods Frameworks` build phase exists on
+your app target, then `pod deintegrate && pod install`. This is the one iOS
+failure mode that builds cleanly and only shows up at runtime.
 
-**Deep link not attributed.** See
-[Deep links](#deep-links-and-notification-attribution) — the launch intent needs
-explicit forwarding, and `singleTask` activities need `setIntent`.
+**iOS: `getHelloMessage()` returns an empty string.** The bridge resolved but the
+native SDK call failed — check the Xcode console for a
+`BooleanMaths getHelloMessage failed` error. An empty string here specifically
+means the XCFramework did not link correctly.
+
+**iOS: `pod install` fails to resolve `BooleanMathsSDK`.** Run
+`pod repo update`, and confirm your app's deployment target is 15.1 or higher.
+If the lockfile pinned `1.0.0`, delete that entry and reinstall — 1.0.0 carries
+an iOS 17.0 floor.
+
+**Events show a delay.** By design on both platforms. Each `trackEvent`
+enqueues an immediate sync attempt; Android's WorkManager also runs a periodic
+15-minute batch job and requires network connectivity, and iOS flushes when the
+app backgrounds.
+
+**Deep link not attributed.** Android only — see
+[Deep links](#deep-links-and-notification-attribution); the launch intent needs
+explicit forwarding, and `singleTask` activities need `setIntent`. On iOS deep
+link attribution is not implemented at all
+([what iOS supports](#what-ios-supports)).
 
 ---
 

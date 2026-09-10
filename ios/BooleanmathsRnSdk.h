@@ -1,19 +1,20 @@
 #import <BooleanmathsRnSdkSpec/BooleanmathsRnSdkSpec.h>
 
 /**
- * iOS no-op implementation of the BooleanMaths SDK.
+ * iOS implementation of the BooleanMaths TurboModule, backed by the
+ * `BooleanMathsSDK` pod (>= 1.0.1, minimum iOS 15.1).
  *
- * There is no native BooleanMaths iOS SDK published yet (the native SDK ships
- * for Android only, as `com.booleanmaths:bm-sdk`). This class exists so that
- * the TurboModule still resolves on iOS and every call degrades into a
- * harmless no-op instead of crashing the host app.
+ * The SDK itself is pure Swift and exposes no Objective-C surface, so this class
+ * does not talk to it directly — every call goes through
+ * `BMBooleanMathsBridge` (`ios/BMBooleanMathsBridge.swift`), which explains why
+ * in detail.
  *
- * In practice these methods are never reached: the JavaScript layer gates on
- * `Platform.OS` and returns before touching the bridge. They are implemented
- * anyway as a backstop.
+ * `initializeSdk` and `trackEvent` hop to the main queue because the SDK is
+ * `@MainActor`; `getHelloMessage` deliberately does not, being synchronous and
+ * value-returning. Failures are logged and swallowed rather than thrown into JS.
  *
- * When an iOS SDK becomes available, replace the bodies below and flip
- * `SUPPORTED_PLATFORMS` in `src/BooleanMaths.native.tsx` to include 'ios'.
+ * `handleIntent` and `handleNotificationIntent` remain no-ops: intents are an
+ * Android concept and iOS deep links are out of scope for this release.
  */
 @interface BooleanmathsRnSdk : NSObject <NativeBooleanmathsRnSdkSpec>
 

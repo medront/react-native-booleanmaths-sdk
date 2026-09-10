@@ -40,10 +40,14 @@ export interface BooleanMathsApi {
    * Forwards the current Activity's intent to the native SDK so ad deep links,
    * app links and push-notification campaign data are attributed.
    *
-   * This is the primary entry point for every kind of launch intent. Android
-   * only — a no-op on every other platform. Call it from your deep-link
-   * handler; `initialize` already forwards the launch intent itself (see the
-   * README for why that needs special handling).
+   * This is the primary entry point for every kind of launch intent. Call it
+   * from your deep-link handler; `initialize` already forwards the launch
+   * intent itself (see the README for why that needs special handling).
+   *
+   * **Android only.** A no-op on iOS — not because iOS is unsupported (event
+   * tracking works fully there), but because intents are an Android concept and
+   * iOS deep links / universal links are out of scope for now. Safe to call
+   * unconditionally from shared code; on iOS it logs one dev-mode notice.
    *
    * Safe to call repeatedly — the native SDK de-duplicates intents it has
    * already processed.
@@ -61,13 +65,18 @@ export interface BooleanMathsApi {
 
   /**
    * Returns the native SDK's hello message, or `null` when there is no native
-   * SDK on this platform. Useful as a bridge smoke test.
+   * SDK on this platform.
+   *
+   * Useful as a bridge smoke test: the string comes from the native SDK itself
+   * on both Android and iOS, so a correct value also proves the native artifact
+   * actually linked.
    */
   getHelloMessage(): string | null;
 
   /**
-   * `true` only on platforms where a real BooleanMaths native SDK is linked.
-   * Currently Android only.
+   * `true` only on platforms where a real BooleanMaths native SDK is linked —
+   * Android and iOS. `false` on web, and on any platform where the native
+   * module failed to resolve (typically a JS install without a native rebuild).
    */
   readonly isSupported: boolean;
 }
