@@ -35,10 +35,11 @@ public final class BMBooleanMathsBridge: NSObject {
   /// Named `initializeSdk` rather than `initialize` for the same reason the
   /// codegen spec is: `+[NSObject initialize]` already exists.
   @MainActor
-  @objc(initializeSdkWithApiKey:pixelId:wrapperVersion:)
+  @objc(initializeSdkWithApiKey:pixelId:isDebug:wrapperVersion:)
   public static func initializeSdk(
     apiKey: String,
     pixelId: String,
+    isDebug: Bool,
     wrapperVersion: String
   ) {
     // Before `initialize`, not after: `initialize` itself emits `FirstOpen` and
@@ -54,7 +55,11 @@ public final class BMBooleanMathsBridge: NSObject {
     // persisted one. One call, before initialize, is correct and sufficient.
     BooleanMaths.shared.setWrapperConfig(type: wrapperType, version: wrapperVersion)
 
-    BooleanMaths.shared.initialize(apiKey: apiKey, pixelId: pixelId)
+    // `isDebug` is passed explicitly rather than left to the SDK's default: it
+    // decides the `environment` field ("development" / "production") stamped on
+    // every event, and it gates the SDK's verbose logging. The JS wrapper always
+    // supplies it, defaulting to false. Same contract as Android.
+    BooleanMaths.shared.initialize(apiKey: apiKey, pixelId: pixelId, isDebug: isDebug)
 
     // There is no iOS equivalent of Android's forwardCurrentIntent(): deep links
     // are deferred on iOS, so nothing is forwarded here. See `handleIntent` in

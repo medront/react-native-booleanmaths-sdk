@@ -25,8 +25,21 @@ export interface BooleanMathsApi {
    *
    * Calling this more than once is harmless — the native SDK ignores
    * subsequent calls.
+   *
+   * @param isDebug Marks this process as a development build. Every event it
+   * tracks is stamped `environment: "development"` instead of `"production"`,
+   * and the native SDKs' verbose logging is switched on. Defaults to `false`.
+   *
+   * The flag is recorded per event when the event is queued, not when the
+   * queue is flushed, so events written by a debug build stay marked as
+   * development even if they only sync later.
+   *
+   * It is deliberately *not* derived from `__DEV__` inside the wrapper —
+   * where an event lands is a backend-routing decision, not a bundler one, and
+   * some teams want release builds pointed at development. Pass `__DEV__`
+   * yourself if that is the behaviour you want.
    */
-  initialize(apiKey: string, pixelId: string): void;
+  initialize(apiKey: string, pixelId: string, isDebug?: boolean): void;
 
   /**
    * Records a custom event. Events are persisted locally and synced in the

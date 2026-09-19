@@ -78,7 +78,55 @@ describe.each(['android', 'ios'])(
 
       sdk.initialize('api-key', 'pixel-id');
 
-      expect(native.initializeSdk).toHaveBeenCalledWith('api-key', 'pixel-id');
+      expect(native.initializeSdk).toHaveBeenCalledWith(
+        'api-key',
+        'pixel-id',
+        false
+      );
+    });
+
+    // The codegen spec declares isDebug as a required boolean, so the wrapper
+    // must always supply one — omitting it would reach the bridge as
+    // `undefined` and fail the argument conversion rather than defaulting.
+    it('defaults isDebug to false and always passes it explicitly', async () => {
+      const native = createFakeNativeModule();
+      const sdk = await loadSdk(platform, native);
+
+      sdk.initialize('api-key', 'pixel-id');
+
+      expect(native.initializeSdk.mock.calls[0]?.[2]).toBe(false);
+    });
+
+    it('forwards isDebug when the caller opts into development mode', async () => {
+      const native = createFakeNativeModule();
+      const sdk = await loadSdk(platform, native);
+
+      sdk.initialize('api-key', 'pixel-id', true);
+
+      expect(native.initializeSdk).toHaveBeenCalledWith(
+        'api-key',
+        'pixel-id',
+        true
+      );
+    });
+
+    // Untyped JS callers exist. A truthy non-boolean must still cross the
+    // bridge as a real boolean, not as whatever was passed in.
+    it('coerces a non-boolean isDebug rather than passing it through', async () => {
+      const native = createFakeNativeModule();
+      const sdk = await loadSdk(platform, native);
+
+      (sdk.initialize as (...args: unknown[]) => void)(
+        'api-key',
+        'pixel-id',
+        'yes'
+      );
+
+      expect(native.initializeSdk).toHaveBeenCalledWith(
+        'api-key',
+        'pixel-id',
+        true
+      );
     });
 
     it('defaults omitted properties to an empty object', async () => {

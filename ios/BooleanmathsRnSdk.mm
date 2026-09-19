@@ -47,7 +47,7 @@ static void BMWarnIntentUnsupportedOnce(void)
   });
 }
 
-- (void)initializeSdk:(NSString *)apiKey pixelId:(NSString *)pixelId
+- (void)initializeSdk:(NSString *)apiKey pixelId:(NSString *)pixelId isDebug:(BOOL)isDebug
 {
   // Captured outside the block: it is a compile-time constant, not thread state.
   NSString *wrapperVersion = @BMRN_WRAPPER_VERSION;
@@ -58,6 +58,7 @@ static void BMWarnIntentUnsupportedOnce(void)
     BMSafely(@"initialize", ^{
       [BMBooleanMathsBridge initializeSdkWithApiKey:apiKey
                                             pixelId:pixelId
+                                            isDebug:isDebug
                                      wrapperVersion:wrapperVersion];
     });
   });

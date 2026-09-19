@@ -70,13 +70,16 @@ function forwardCurrentIntent(): void {
 export const BooleanMaths: BooleanMathsApi = {
   isSupported,
 
-  initialize(apiKey: string, pixelId: string): void {
+  initialize(apiKey: string, pixelId: string, isDebug: boolean = false): void {
     if (!isSupported) {
       warnOnce();
       return;
     }
 
-    NativeBooleanmathsRnSdk!.initializeSdk(apiKey, pixelId);
+    // Coerced rather than passed through: the codegen spec declares a
+    // non-optional boolean, and a truthy non-boolean from untyped JS would
+    // arrive at the native side as a type mismatch rather than a flag.
+    NativeBooleanmathsRnSdk!.initializeSdk(apiKey, pixelId, Boolean(isDebug));
   },
 
   trackEvent(name: string, properties: BooleanMathsEventProperties = {}): void {

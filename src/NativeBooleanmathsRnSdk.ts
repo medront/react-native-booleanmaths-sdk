@@ -6,8 +6,13 @@ export interface Spec extends TurboModule {
    * already taken by `NativeModule.initialize()` on Android and by
    * `+[NSObject initialize]` on iOS. The public JS API exposes this as
    * `BooleanMaths.initialize()`.
+   *
+   * `isDebug` is required here even though it is optional on the public API —
+   * codegen has no notion of a default, so `BooleanMaths.initialize` always
+   * passes an explicit boolean. Same arrangement as `trackEvent`'s
+   * `properties`.
    */
-  initializeSdk(apiKey: string, pixelId: string): void;
+  initializeSdk(apiKey: string, pixelId: string, isDebug: boolean): void;
   trackEvent(name: string, properties: Object): void;
   /** Android only. No-op elsewhere. */
   handleIntent(): void;

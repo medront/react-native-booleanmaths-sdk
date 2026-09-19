@@ -26,7 +26,7 @@ function warnOnce() {
 export const BooleanMaths: BooleanMathsApi = {
   isSupported: false,
 
-  initialize(_apiKey: string, _pixelId: string): void {
+  initialize(_apiKey: string, _pixelId: string, _isDebug?: boolean): void {
     warnOnce();
   },
 

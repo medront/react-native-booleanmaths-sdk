@@ -8,17 +8,22 @@ import com.facebook.react.bridge.ReadableMap
 class BooleanmathsRnSdkModule(reactContext: ReactApplicationContext) :
   NativeBooleanmathsRnSdkSpec(reactContext) {
 
-  override fun initializeSdk(apiKey: String, pixelId: String) {
+  override fun initializeSdk(apiKey: String, pixelId: String, isDebug: Boolean) {
     safely("initialize") {
       // Stamp the wrapper identity *before* initialize() so the automatic
       // `app_opened` and `FirstOpen` events that the native SDK tracks during
       // initialization already carry wrapper_type / wrapper_version.
       applyWrapperConfig()
 
+      // `isDebug` is passed explicitly rather than left to the native default:
+      // it decides the `environment` field ("development" / "production") that
+      // every event carries, and it gates the native SDK's verbose logging.
+      // The JS wrapper always supplies it, defaulting to false.
       BooleanMathsSDK.initialize(
         reactApplicationContext.applicationContext,
         apiKey,
-        pixelId
+        pixelId,
+        isDebug
       )
 
       // ...and again afterwards, because the native SDK can only persist the
