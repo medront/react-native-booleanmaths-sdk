@@ -1,6 +1,6 @@
 {
   "name": "@booleanmaths/booleanmaths-rn-sdk",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "React Native SDK for BooleanMaths — track user events and attribution in mobile apps.",
   "main": "./lib/module/index.js",
   "types": "./lib/typescript/src/index.d.ts",
