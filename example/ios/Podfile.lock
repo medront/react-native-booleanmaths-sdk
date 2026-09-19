@@ -1,6 +1,6 @@
 PODS:
-  - BooleanmathsRnSdk (0.2.0):
-    - BooleanMathsSDK (~> 1.0.1)
+  - BooleanmathsRnSdk (0.3.0):
+    - BooleanMathsSDK (~> 1.1)
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -22,7 +22,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - BooleanMathsSDK (1.0.1)
+  - BooleanMathsSDK (1.1.0)
   - FBLazyVector (0.85.0)
   - hermes-engine (250829098.0.10):
     - hermes-engine/Pre-built (= 250829098.0.10)
@@ -2006,8 +2006,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon/yoga"
 
 SPEC CHECKSUMS:
-  BooleanmathsRnSdk: 2c8483df602d4fe5126c9c7d4939e288120dd2eb
-  BooleanMathsSDK: 0c6818850c63bc6f3e3e9847c80f831fa2cb9d3f
+  BooleanmathsRnSdk: 4a9a2c10759882687c2f13d1351a96a0c95e9e3f
+  BooleanMathsSDK: b3e791c1352ff60007f3f017c1e82c1b1d47c9e4
   FBLazyVector: c00c20551d40126351a6783c47ce75f5b374851b
   hermes-engine: 0c7a1d3b44ccb08314b698c81245582d877dde0f
   RCTDeprecation: 3bb167081b134461cfeb875ff7ae1945f8635257
