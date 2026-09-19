@@ -18,8 +18,8 @@ call the same methods everywhere.
 
 | Platform | Native SDK | Behaviour |
 | :------- | :--------- | :-------- |
-| Android  | ✅ `com.booleanmaths:bm-sdk:1.0.9` | Fully functional |
-| iOS      | ✅ `BooleanMathsSDK 1.0.1` | Event tracking fully functional — see below |
+| Android  | ✅ `com.booleanmaths:bm-sdk:1.0.12` | Fully functional |
+| iOS      | ✅ `BooleanMathsSDK 1.1.0` | Event tracking fully functional — see below |
 | Web      | ❌ not published | Silent no-op, **never crashes** |
 
 ### What iOS supports
@@ -33,6 +33,8 @@ rather than a bug.
 | `initialize()` | ✅ | ✅ |
 | `trackEvent()` with nested properties | ✅ | ✅ |
 | `wrapper_type` / `wrapper_version` on every event | ✅ | ✅ |
+| `isDebug` → `environment` on every event | ✅ | ✅ |
+| `app_info` (package, version, install/update times) on every event | ✅ | ✅ |
 | Automatic `app_opened` | ✅ | ✅ |
 | Automatic `FirstOpen` (once per install) | ✅ | ✅ — but with no attribution payload, see below |
 | Visitor ID and 30-minute session handling | ✅ | ✅ |
@@ -140,10 +142,16 @@ To pin a different native SDK version, set this in your app's **root**
 ```gradle
 buildscript {
     ext {
-        BooleanmathsRnSdk_bmSdkVersion = "1.0.9"
+        BooleanmathsRnSdk_bmSdkVersion = "1.0.12"
     }
 }
 ```
+
+> ⚠️ **1.0.10 is the floor.** The wrapper calls
+> `BooleanMathsSDK.initialize(context, apiKey, pixelId, isDebug)`, and the
+> four-argument overload only exists from 1.0.10. Pinning anything older fails
+> the Kotlin compile with an unresolved-overload error rather than degrading at
+> runtime.
 
 ### iOS
 
@@ -157,10 +165,10 @@ That resolves `BooleanMathsSDK` from CocoaPods Trunk. Points worth knowing:
 
 - **Minimum deployment target is iOS 15.1**, matching React Native's own floor,
   so adopting this SDK does not raise your app's minimum iOS version.
-- **The pod is pinned to `~> 1.0.1`,** deliberately not `~> 1.0`. Version 1.0.0
-  is still published with an iOS 17.0 floor, and resolving to it would break
-  the install for apps below iOS 17. Confirm your `Podfile.lock` shows
-  `BooleanMathsSDK (1.0.1)` or newer.
+- **The pod is constrained to `~> 1.1`** — that is, `>= 1.1, < 2.0`. The floor
+  matters: version 1.0.0 is still published with an iOS 17.0 floor, and
+  resolving to it would break the install for apps below iOS 17. Confirm your
+  `Podfile.lock` shows `BooleanMathsSDK (1.1.0)` or newer.
 - **The SDK ships as a closed-source, vendored *dynamic* XCFramework.**
   CocoaPods embeds and re-signs it with your app's identity. If you use
   `use_frameworks!`, both `:linkage => :static` and `:linkage => :dynamic`
@@ -181,6 +189,9 @@ import { BooleanMaths } from '@booleanmaths/booleanmaths-rn-sdk';
 
 // Once, as early as possible — typically in your root component.
 BooleanMaths.initialize('YOUR_API_KEY', 'YOUR_PIXEL_ID');
+
+// Or, to mark this build's events as development rather than production:
+BooleanMaths.initialize('YOUR_API_KEY', 'YOUR_PIXEL_ID', __DEV__);
 
 // Anywhere afterwards.
 BooleanMaths.trackEvent('purchase', {
@@ -204,7 +215,7 @@ ignored.
 
 ## API
 
-### `BooleanMaths.initialize(apiKey, pixelId): void`
+### `BooleanMaths.initialize(apiKey, pixelId, isDebug?): void`
 
 Initializes the native SDK. Also registers this wrapper with the native SDK
 **before** initializing, so that even the automatic `FirstOpen` and `app_opened`
@@ -216,6 +227,39 @@ version.
 On Android it additionally forwards the launch intent (see
 [Deep links](#deep-links-and-notification-attribution)); there is no iOS
 equivalent.
+
+`isDebug` defaults to `false`. See [Debug mode](#debug-mode) below.
+
+### Debug mode
+
+Passing `isDebug: true` does two things on both platforms:
+
+1. **Every event this process tracks is stamped `environment: "development"`**
+   instead of `"production"`, in the `setup` block of the request payload.
+2. **The native SDK's verbose logging is switched on.** Warnings and errors —
+   "SDK is already initialized", network failures, malformed intents — are
+   logged *regardless* of this flag, so a broken integration is still
+   diagnosable in a production build. Only the routine per-event chatter
+   ("Persisted event", "Sending payload") is gated.
+
+The flag is recorded **per event, when the event is queued** — not when the
+queue is flushed. An event written by a debug build therefore stays marked as
+development even if it only reaches the network later, after an app restart.
+Both platforms migrated their local queue schemas for this (Room v6 → v7 on
+Android, SQLite v1 → v2 on iOS); the migration is automatic and no events are
+lost.
+
+The wrapper deliberately **does not** default this to `__DEV__`. Which
+environment events land in is a backend-routing decision, not a bundler one —
+release builds pointed at a development pixel are a normal QA setup. Pass
+`__DEV__` yourself if that is the behaviour you want:
+
+```ts
+BooleanMaths.initialize(API_KEY, PIXEL_ID, __DEV__);
+```
+
+Requires native SDK `bm-sdk` **1.0.10+** on Android and `BooleanMathsSDK`
+**1.1.0+** on iOS; both are the versions this wrapper depends on.
 
 ### `BooleanMaths.trackEvent(name, properties?): void`
 
@@ -379,7 +423,7 @@ persisted by `AttributionManager` and attached to **every subsequent event** as
 `data.attribution`. iOS produces no `data.attribution` block, since it handles
 no intents; Apple Search Ads attribution is deferred to a later release.
 
-### What counts as a campaign intent (native SDK v1.0.9)
+### What counts as a campaign intent (native SDK v1.0.12)
 
 `handleIntent` ignores an intent when **all** of these hold, which is what a
 plain launcher tap looks like:
@@ -449,7 +493,7 @@ costs you that one key and nothing else.
   { "value": 2499, "items": [{ "quantity": 2, "price": 999.5 }] }
   ```
 
-  > ⚠️ **Known native SDK limitation (still present in v1.0.9).** The integers do *not* survive
+  > ⚠️ **Known native SDK limitation (still present in v1.0.12).** The integers do *not* survive
   > to the wire. `EventDispatcher` re-reads the stored payload with
   > `gson.fromJson(properties, Map::class.java)`, and Gson coerces every number
   > in a raw `Map` to `Double` — so the request body ends up with `2499.0` and
