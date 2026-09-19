@@ -43,8 +43,15 @@ function parseDeepLink(url: string) {
   return { target: segments[0] ?? '', params };
 }
 
-//initialize SDK
-BooleanMaths.initialize(API_KEY, PIXEL_ID);
+// Initialize the SDK.
+//
+// The third `isDebug` argument marks every event this build tracks as
+// `environment: "development"` and turns on the native SDKs' verbose logging.
+// The wrapper does not infer it from `__DEV__` on your behalf — which
+// environment events land in is a backend-routing decision, not a bundler one —
+// so the example passes `__DEV__` explicitly. It defaults to `false`, which is
+// what a release build wants.
+BooleanMaths.initialize(API_KEY, PIXEL_ID, __DEV__);
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>({ name: 'home' });
@@ -93,7 +100,6 @@ export default function App() {
   );
 
   useEffect(() => {
-    // BooleanMaths.initialize(API_KEY, PIXEL_ID);
     append(
       BooleanMaths.isSupported
         ? 'SDK initialized'
