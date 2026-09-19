@@ -10,8 +10,8 @@ Pod::Spec.new do |s|
   s.license      = package["license"]
   s.authors      = package["author"]
 
-  # No platform override needed. BooleanMathsSDK 1.0.1 lowered its own floor to
-  # 15.1, which is exactly React Native's min_ios_version_supported — pinning a
+  # No platform override needed. BooleanMathsSDK has declared a 15.1 floor since
+  # 1.0.1, which is exactly React Native's min_ios_version_supported — pinning a
   # higher floor here would push it onto every consuming app.
   s.platforms    = { :ios => min_ios_version_supported }
   s.source       = { :git => "https://github.com/medront/react-native-booleanmaths-sdk.git", :tag => "v#{s.version}" }
@@ -25,10 +25,12 @@ Pod::Spec.new do |s|
 
   s.swift_version = "5.9"
 
-  # `~> 1.0.1`, deliberately not `~> 1.0`: 1.0.0 is still published on Trunk
-  # carrying an iOS 17.0 deployment target, and resolving to it would break the
-  # install for any app below iOS 17.
-  s.dependency "BooleanMathsSDK", "~> 1.0.1"
+  # `~> 1.1` resolves to >= 1.1, < 2.0. The earlier pin carried a `.1` patch
+  # component purely to exclude 1.0.0, which is still published on Trunk carrying
+  # an iOS 17.0 deployment target and would break the install for any app below
+  # iOS 17. A 1.1 floor excludes it outright, so the patch component is no longer
+  # load-bearing and the range can stay open across minors.
+  s.dependency "BooleanMathsSDK", "~> 1.1"
 
   # Mirrors Android's BuildConfig.WRAPPER_VERSION, which is read from
   # package.json so the reported wrapper_version cannot drift from the published
