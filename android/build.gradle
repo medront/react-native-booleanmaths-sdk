@@ -6,7 +6,7 @@ buildscript {
     // Version of the native Android SDK (com.booleanmaths:bm-sdk) this wrapper
     // is built against. Override with `ext.BooleanmathsRnSdk_bmSdkVersion` in
     // your app's root build.gradle to pin a different one.
-    bmSdkVersion: "1.0.9"
+    bmSdkVersion: "1.0.12"
   ]
 
   ext.getExtOrDefault = { prop ->
